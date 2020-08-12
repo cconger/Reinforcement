@@ -1,0 +1,7 @@
+from tensorflow/tensorflow:latest-gpu
+
+EXPOSE 6006
+VOLUME /tf-logs
+
+# Runs tensorboard on the shared volume provided
+CMD ["tensorboard", "--logdir", "/tf-logs", "--bind_all"]
