@@ -66,7 +66,7 @@ def capture_run(path, eval_env, eval_policy):
     def capture_frame(traj):
         obs = traj.observation.numpy()
 
-        obs = (obs.reshape((10,10,1)) * (255 / 4)).astype(np.uint8)
+        obs = (obs.reshape((10,10,1)) * 255).astype(np.uint8)
         obs = cv2.resize(obs, dsize=(100,100), interpolation=cv2.INTER_NEAREST)
         writer.write(obs)
 

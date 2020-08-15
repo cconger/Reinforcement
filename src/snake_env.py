@@ -11,7 +11,7 @@ class SnakeEnv(py_environment.PyEnvironment):
         self._action_spec = array_spec.BoundedArraySpec(
                 shape=(), dtype=np.int32, minimum=0, maximum=3, name='action')
         self._observation_spec = array_spec.BoundedArraySpec(
-                shape=(100,), dtype=np.int32, minimum=0, name="observation")
+                shape=(10,10,1), dtype=np.float32, minimum=0, name="observation")
         self._game = SnakeGame(size=10)
         self._episode_ended = False
         self._reward_count = 0
@@ -24,12 +24,15 @@ class SnakeEnv(py_environment.PyEnvironment):
     def observation_spec(self):
         return self._observation_spec
     
+    def _obs(self, obs):
+        return np.expand_dims((obs / 4.0).astype(np.float32), axis=2)
+    
     def _reset(self):
         self._episode_ended = False
         self._step_count = 0
         self._reward_count = 0
-        obs = self._game.reset()
-        return ts.restart(obs.flatten())
+        obs = self._obs(self._game.reset())
+        return ts.restart(obs)
     
     def _step(self, action):
         if self._episode_ended:
@@ -37,7 +40,7 @@ class SnakeEnv(py_environment.PyEnvironment):
 
         self._step_count += 1
         obs, reward, terminal = self._game.step(action)
-        obs = obs.flatten()
+        obs = self._obs(obs)
 
         if terminal:
             self._episode_ended = True

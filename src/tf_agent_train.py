@@ -45,7 +45,7 @@ def run():
   q_net = q_network.QNetwork(
       tf_env.observation_spec(),
       tf_env.action_spec(),
-      conv_layer_params=(),
+      conv_layer_params=((64,2,1),),
       fc_layer_params=(512,256,128),
   )
 
