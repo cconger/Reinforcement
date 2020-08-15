@@ -54,20 +54,26 @@ def run():
 
     policy_checkpointer.initialize_or_restore()
 
-    fourcc = cv2.VideoWriter_fourcc(*'x264')
-    writer = cv2.VideoWriter(os.path.join(root_dir, "snake" + str(global_counter.numpy()) + ".mp4"), 0x00000021, 1.0, (100,100), isColor=False)
+    capture_run(os.path.join(root_dir, "snake" + str(global_counter.numpy()) + ".mp4"), env, agent.policy)
+
+def capture_run(path, eval_env, eval_policy):
+    logging.info("Writing video to %s", path)
+    #fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fourcc = cv2.VideoWriter_fourcc(*'VP90')
+    path = os.path.splitext(path)[0] + '.webm'
+    writer = cv2.VideoWriter(path, fourcc, 6.0, (100,100), isColor=False)
 
     def capture_frame(traj):
         obs = traj.observation.numpy()
 
-        obs = (obs.reshape((10,10,1)) * (255 / np.max(obs))).astype(np.uint8)
+        obs = (obs.reshape((10,10,1)) * (255 / 4)).astype(np.uint8)
         obs = cv2.resize(obs, dsize=(100,100), interpolation=cv2.INTER_NEAREST)
         writer.write(obs)
 
 
     driver = dynamic_episode_driver.DynamicEpisodeDriver(
-            env,
-            agent.policy,
+            eval_env,
+            eval_policy,
             observers=[capture_frame],
             num_episodes=1,
     ).run()
@@ -75,4 +81,5 @@ def run():
     writer.release()
 
 
-run()
+if __name__ == "__main__":
+    run()

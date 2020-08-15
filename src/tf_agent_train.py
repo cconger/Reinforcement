@@ -16,8 +16,9 @@ from tf_agents.utils import common
 from tf_agents.eval import metric_utils
 
 from snake_env import SnakeEnv
+from tf_agent_render import capture_run
 
-num_iterations = 100000
+num_iterations = 2000000
 batch_size = 64
 learning_rate = 1e-3
 log_interval = 20
@@ -35,17 +36,17 @@ collect_steps_per_iteration = 1
 train_checkpoint_interval = 5000
 policy_checkpoint_interval = 5000
 rb_checkpoint_interval = 5000
-capture_interval = 1000
+capture_interval = 10000
 
 def run():
   tf_env = tf_py_environment.TFPyEnvironment(SnakeEnv())
-  eval_env = tf_py_environment.TFPyEnvironment(SnakeEnv(step_limit=1000))
+  eval_env = tf_py_environment.TFPyEnvironment(SnakeEnv(step_limit=50))
 
   q_net = q_network.QNetwork(
       tf_env.observation_spec(),
       tf_env.action_spec(),
       conv_layer_params=(),
-      fc_layer_params=(256,100),
+      fc_layer_params=(512,256,128),
   )
 
   optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
@@ -118,14 +119,17 @@ def run():
   random_policy = random_tf_policy.RandomTFPolicy(
       tf_env.time_step_spec(), tf_env.action_spec())
 
-  logging.info("Capturing %d steps to seed with random memories", initial_collect_steps)
+  if replay_buffer.num_frames() >= initial_collect_steps:
+      logging.info("We loaded memories, not doing random seed")
+  else:
+    logging.info("Capturing %d steps to seed with random memories", initial_collect_steps)
 
-  dynamic_step_driver.DynamicStepDriver(
-    tf_env,
-    random_policy,
-    observers=[replay_buffer.add_batch] + train_metrics,
-    num_steps=initial_collect_steps
-  ).run()
+    dynamic_step_driver.DynamicStepDriver(
+        tf_env,
+        random_policy,
+        observers=[replay_buffer.add_batch] + train_metrics,
+        num_steps=initial_collect_steps
+    ).run()
 
   train_summary_writer = tf.summary.create_file_writer(train_dir)
   train_summary_writer.set_as_default()
@@ -136,7 +140,7 @@ def run():
       avg_return_metric,
       tf_metrics.AverageEpisodeLengthMetric(buffer_size=num_eval_episodes),
   ]
-  logging.info("Running initial evaluation on random inputs")
+  logging.info("Running initial evaluation")
   results = metric_utils.eager_compute(
       eval_metrics,
       eval_env,
@@ -200,6 +204,10 @@ def run():
 
     if step % rb_checkpoint_interval == 0:
       rb_checkpointer.save(global_step=step)
+
+    if step % capture_interval == 0:
+      print("Capturing run:")
+      capture_run(os.path.join(root_dir, "snake" + str(step) + ".mp4"), eval_env, agent.policy)
     
     if step % eval_interval == 0:
       print("EVALUTION TIME:")
@@ -216,4 +224,6 @@ def run():
       avg_returns.append((global_counter.numpy(), avg_return_metric.result().numpy()))
 
 
-run()
+if __name__ == "__main__":
+    logging.set_verbosity(logging.INFO)
+    run()

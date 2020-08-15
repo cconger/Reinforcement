@@ -12,8 +12,9 @@ class SnakeEnv(py_environment.PyEnvironment):
                 shape=(), dtype=np.int32, minimum=0, maximum=3, name='action')
         self._observation_spec = array_spec.BoundedArraySpec(
                 shape=(100,), dtype=np.int32, minimum=0, name="observation")
-        self._game = SnakeGame(size=10, no_grow=True)
+        self._game = SnakeGame(size=10)
         self._episode_ended = False
+        self._reward_count = 0
         self._step_limit = step_limit
         self._step_count = 0
 
@@ -26,6 +27,7 @@ class SnakeEnv(py_environment.PyEnvironment):
     def _reset(self):
         self._episode_ended = False
         self._step_count = 0
+        self._reward_count = 0
         obs = self._game.reset()
         return ts.restart(obs.flatten())
     
@@ -39,6 +41,15 @@ class SnakeEnv(py_environment.PyEnvironment):
 
         if terminal:
             self._episode_ended = True
+
+        self._reward_count += reward
+        # Stop if we have gotten 1000 treats
+        if self._reward_count >= 1000:
+            return ts.termination(obs, reward)
+
+        # Reset how long we have to live if we get a treat
+        if reward != 0:
+            self._step_count = 0
 
         if self._step_limit is not None and self._step_count > self._step_limit:
             self._episode_ended = True
